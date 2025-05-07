@@ -334,9 +334,10 @@ class SC2Env(environment.Base):
       self._ports = []
 
     # Actually launch the game processes.
+    # NOTE: extra_ports=self._ports is not supported nor needed for the run config
+    # See https://github.com/google-deepmind/pysc2/issues/351
     self._sc2_procs = [
-        self._run_config.start(extra_ports=self._ports,
-                               want_rgb=interface.HasField("render"))
+        self._run_config.start(want_rgb=interface.HasField("render"))
         for interface in self._interface_options]
     self._controllers = [p.controller for p in self._sc2_procs]
 
@@ -737,7 +738,12 @@ class SC2Env(environment.Base):
     return replay_path
 
   def close(self):
-    logging.info("Environment Close")
+    # Close is called on del by the garbage collector probably to 
+    # prevent that processes are kept running
+    # However, logging seems to be garbage collected before everything 
+    # else when using newer packages and Python>=3.13
+    # logging.info("Environment Close")
+   
     if hasattr(self, "_metrics") and self._metrics:
       self._metrics.close()
       self._metrics = None
