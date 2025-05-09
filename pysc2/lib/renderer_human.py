@@ -1675,6 +1675,12 @@ class RendererHuman(object):
     """Push an observation onto the queue to be rendered."""
     if not self._initialized:
       return
+    """
+      Under linux display.flip() has to be called in the main thread. This might make the thread a little slow
+      But when using the UI itself, the thread is already pretty slow. In case of a disabled ui this would have no impact.
+    """
+    with sw("flip"):
+      pygame.display.flip()
     now = time.time()
     self._game_times.append(
         (now - self._last_time,
@@ -1726,9 +1732,6 @@ class RendererHuman(object):
                      0.1)
 
     self.draw_actions()
-
-    with sw("flip"):
-      pygame.display.flip()
 
     self._render_times.append(time.time() - start_time)
 
