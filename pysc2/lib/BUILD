@@ -264,6 +264,40 @@ pytype_library(
 )
 
 pytype_library(
+    name = "web_renderer",
+    srcs = ["web_renderer.py"],
+    srcs_version = "PY3",
+    data = [
+        "web_renderer_assets/index.html",
+        "web_renderer_assets/viewer.js",
+    ],
+    deps = [
+        "@absl_py//absl/logging",
+        ":buffs",
+        ":colors",
+        ":features",
+        ":point",
+        ":static_data",
+        ":transform",
+        requirement("numpy"),
+        requirement("websockets"),
+        "@s2client_proto//s2clientprotocol:error_py_pb2",
+        "@s2client_proto//s2clientprotocol:raw_py_pb2",
+        "@s2client_proto//s2clientprotocol:sc2api_py_pb2",
+    ],
+)
+
+pytype_library(
+    name = "viewer",
+    srcs = ["viewer.py"],
+    srcs_version = "PY3",
+    deps = [
+        ":renderer_human",
+        ":web_renderer",
+    ],
+)
+
+pytype_library(
     name = "replay",
     srcs = ["replay.py"],
     srcs_version = "PY3",

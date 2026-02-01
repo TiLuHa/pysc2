@@ -63,6 +63,12 @@ setup(
         'pysc2.run_configs',
         'pysc2.tests',
     ],
+    package_data={
+        'pysc2.lib': [
+            'web_renderer_assets/index.html',
+            'web_renderer_assets/viewer.js',
+        ],
+    },
     install_requires=[
         'absl-py>=0.1.0',
         'deepdiff',
@@ -72,12 +78,13 @@ setup(
         'mpyq',
         'numpy>=1.10',
         'portpicker>=1.2.0',
-        'protobuf>=2.6',
+        'protobuf>=3.20.3,<4',
         'pygame',
         'requests',
         's2clientprotocol>=4.10.1.75800.0',
         's2protocol',
         'sk-video',
+        'websockets',
         'websocket-client',
     ],
     entry_points={

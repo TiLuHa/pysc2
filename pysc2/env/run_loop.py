@@ -16,7 +16,7 @@
 import time
 
 
-def run_loop(agents, env, max_frames=0, max_episodes=0):
+def run_loop(agents, env, max_frames=0, max_episodes=0, step_callback=None):
   """A run loop to have agents and an environment interact."""
   total_frames = 0
   total_episodes = 0
@@ -31,6 +31,8 @@ def run_loop(agents, env, max_frames=0, max_episodes=0):
     while not max_episodes or total_episodes < max_episodes:
       total_episodes += 1
       timesteps = env.reset()
+      if step_callback:
+        step_callback(timesteps)
       for a in agents:
         a.reset()
       while True:
@@ -42,6 +44,8 @@ def run_loop(agents, env, max_frames=0, max_episodes=0):
         if timesteps[0].last():
           break
         timesteps = env.step(actions)
+        if step_callback:
+          step_callback(timesteps)
   except KeyboardInterrupt:
     pass
   finally:

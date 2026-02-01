@@ -4,10 +4,12 @@ mock
 mpyq
 numpy>=1.10.0
 portpicker>=1.2.0
+protobuf>=3.20.3,<4
 psutil
 pygame
 requests
 s2protocol
 sk-video
 typing-extensions
+websockets
 websocket-client

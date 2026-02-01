@@ -1,2 +1,5 @@
 *.pyc
 *_pb2.py
+.venv
+.python-version
+PySC2.egg-info/
