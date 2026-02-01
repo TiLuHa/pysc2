@@ -236,6 +236,7 @@ pytype_binary(
         "//pysc2/env:sc2_env",
         "//pysc2/lib:point_flag",
         "//pysc2/lib:stopwatch",
+        "//pysc2/lib:viewer",
         "//pysc2/maps",
         "@absl_py//absl:app",
         "@absl_py//absl/flags",

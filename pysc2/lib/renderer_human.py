@@ -569,6 +569,12 @@ class RendererHuman(object):
     screen_size_px = main_screen_px.scale_max_size(window_size_px)
     minimap_size_px = self._playable.diagonal.scale_max_size(screen_size_px / 4)
     minimap_offset = point.Point(0, (screen_size_px.y - minimap_size_px.y))
+    logging.info(
+        "RendererHuman window=%s screen_px=%s minimap_px=%s main_screen_px=%s",
+        window_size_px,
+        screen_size_px,
+        minimap_size_px,
+        main_screen_px)
 
     if self._render_rgb:
       rgb_screen_to_main_screen = transform.Linear(

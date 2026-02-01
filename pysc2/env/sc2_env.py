@@ -28,7 +28,6 @@ from pysc2.lib import actions as actions_lib
 from pysc2.lib import features
 from pysc2.lib import metrics
 from pysc2.lib import portspicker
-from pysc2.lib import renderer_human
 from pysc2.lib import run_parallel
 from pysc2.lib import stopwatch
 
@@ -103,6 +102,7 @@ class SC2Env(environment.Base):
                discount=1.,
                discount_zero_after_timeout=False,
                visualize=False,
+               viewer_options=None,
                step_mul=None,
                realtime=False,
                save_replay_episodes=0,
@@ -147,6 +147,8 @@ class SC2Env(environment.Base):
           after the `game_steps_per_episode` timeout.
       visualize: Whether to pop up a window showing the camera and feature
           layers. This won't work without access to a window manager.
+      viewer_options: Optional shared viewer configuration. If omitted,
+          `visualize=True` continues to enable the pygame human renderer.
       step_mul: How many game steps per agent step (action/observation). None
           means use the map default.
       realtime: Whether to use realtime mode. In this mode the game simulation
@@ -218,6 +220,7 @@ class SC2Env(environment.Base):
       raise ValueError("Missing replay_dir")
 
     self._realtime = realtime
+    self._viewer_options = viewer_options
     self._last_step_time = None
     self._save_replay_episodes = save_replay_episodes
     self._replay_dir = replay_dir
@@ -254,8 +257,11 @@ class SC2Env(environment.Base):
         for aif in agent_interface_format
     ]
     self._interface_formats = agent_interface_format
+    require_viewer_raw = visualize or self._viewer_options is not None
     self._interface_options = [
-        self._get_interface(interface_format, require_raw=visualize and i == 0)
+        self._get_interface(
+            interface_format,
+            require_raw=require_viewer_raw and i == 0)
         for i, interface_format in enumerate(agent_interface_format)]
 
     self._launch_game()
@@ -267,13 +273,18 @@ class SC2Env(environment.Base):
     self._delayed_actions = [collections.deque()
                              for _ in self._action_delay_fns]
 
-    if visualize:
-      self._renderer_human = renderer_human.RendererHuman()
-      self._renderer_human.init(
+    if self._viewer_options is None and visualize:
+      from pysc2.lib import viewer as viewer_lib  # Lazy import to avoid optional deps unless needed.
+      self._viewer_options = viewer_lib.ViewerOptions(mode="pygame")
+
+    if self._viewer_options is not None:
+      from pysc2.lib import viewer as viewer_lib  # Lazy import to avoid optional deps unless needed.
+      self._viewer = viewer_lib.Viewer(self._viewer_options)
+      self._viewer.init(
           self._controllers[0].game_info(),
           self._controllers[0].data())
     else:
-      self._renderer_human = None
+      self._viewer = None
 
     self._metrics = metrics.Metrics(self._map_name)
     self._metrics.increment_instance()
@@ -683,15 +694,14 @@ class SC2Env(environment.Base):
     else:
       reward = outcome
 
-    if self._renderer_human:
-      self._renderer_human.render(self._obs[0])
-      cmd = self._renderer_human.get_actions(
-          self._run_config, self._controllers[0])
-      if cmd == renderer_human.ActionCmd.STEP:
+    if self._viewer:
+      self._viewer.render(self._obs[0])
+      cmd = self._viewer.action_cmd(self._run_config, self._controllers[0])
+      if cmd == "step":
         pass
-      elif cmd == renderer_human.ActionCmd.RESTART:
+      elif cmd == "restart":
         self._state = environment.StepType.LAST
-      elif cmd == renderer_human.ActionCmd.QUIT:
+      elif cmd == "quit":
         raise KeyboardInterrupt("Quit?")
 
     game_loop = _get_game_loop(self._agent_obs[0])
@@ -747,9 +757,9 @@ class SC2Env(environment.Base):
     if hasattr(self, "_metrics") and self._metrics:
       self._metrics.close()
       self._metrics = None
-    if hasattr(self, "_renderer_human") and self._renderer_human:
-      self._renderer_human.close()
-      self._renderer_human = None
+    if hasattr(self, "_viewer") and self._viewer:
+      self._viewer.close()
+      self._viewer = None
 
     # Don't use parallel since it might be broken by an exception.
     if hasattr(self, "_controllers") and self._controllers:

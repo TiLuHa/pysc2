@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PySC2 Web Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1017;
+      --panel: #111927;
+      --panel-strong: #172132;
+      --border: #2a3446;
+      --text: #e8edf5;
+      --muted: #96a3b8;
+      --accent: #4bc0ff;
+      --alert: #ff7f7f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #15243c 0%, var(--bg) 48%);
+      color: var(--text);
+    }
+    header {
+      padding: 18px 20px 10px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 6px;
+      letter-spacing: 0.02em;
+    }
+    #status {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(320px, 0.9fr);
+      gap: 18px;
+      padding: 0 20px 20px;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .stage {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .top-tools {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .controls .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      margin-bottom: 10px;
+    }
+    .controls .row:last-child {
+      margin-bottom: 0;
+    }
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    select, input {
+      background: var(--panel-strong);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .viewports {
+      padding: 14px;
+    }
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 0.32fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .canvas-side {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+    .canvas-card {
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .canvas-card div {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    canvas {
+      display: block;
+      width: auto;
+      max-width: none;
+      border-radius: 8px;
+      border: 1px solid #1d2634;
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .sidebar {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+    .sidebar .panel {
+      padding: 14px;
+    }
+    .inspector {
+      padding: 0;
+      overflow: hidden;
+    }
+    .inspector details {
+      width: 100%;
+    }
+    .inspector summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      user-select: none;
+    }
+    .inspector summary::-webkit-details-marker {
+      display: none;
+    }
+    .inspector summary::after {
+      content: "Open";
+      float: right;
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    .inspector details[open] summary::after {
+      content: "Hide";
+    }
+    .inspector-body {
+      padding: 0 14px 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .inspector-group {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .inspector-group:first-of-type {
+      margin-top: 12px;
+    }
+    .inspector-group-title {
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .hud-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .stat .label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .stat .value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .list {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .list-item {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .list-item.alert {
+      color: var(--alert);
+    }
+    .section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .section:first-child {
+      margin-top: 12px;
+      padding-top: 0;
+      border-top: 0;
+    }
+    .section-title {
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 12px;
+    }
+    .legend-panel {
+      padding: 14px;
+    }
+    .legend-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .legend-group {
+      display: grid;
+      gap: 10px;
+    }
+    .legend-title {
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .legend-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-items {
+      display: grid;
+      gap: 6px;
+    }
+    .legend-item {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #000;
+    }
+    .legend-gradient {
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .legend-scale {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .control-panel {
+      display: grid;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .control-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .control-button {
+      appearance: none;
+      background: var(--panel-strong);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .control-button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .control-status {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .top-tools {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 720px) {
+      .canvas-grid {
+        grid-template-columns: 1fr;
+      }
+      .hud-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PySC2 Web Viewer</h1>
+    <div id="status">Connecting...</div>
+  </header>
+
+  <div class="layout">
+    <section class="stage">
+      <div class="top-tools">
+        <div class="panel inspector">
+          <details id="inspectorDetails">
+            <summary>Inspector</summary>
+            <div class="inspector-body controls">
+              <div class="hint">
+                Der Inspector ist optional und eher fuer Analyse gedacht. Die
+                Standardansicht unten soll moeglichst nah am `pygame`-Viewer bleiben.
+              </div>
+              <div class="inspector-group">
+                <div class="inspector-group-title">Hauptscreen</div>
+                <div class="row">
+                  <label>Screen view
+                    <select id="screenMode">
+                      <option value="composite">default view</option>
+                      <option value="layer">single layer</option>
+                    </select>
+                  </label>
+                  <label>Screen layer
+                    <select id="screenLayer"></select>
+                  </label>
+                </div>
+                <div class="row">
+                  <label><input type="checkbox" id="showEffects" checked> effects</label>
+                  <label><input type="checkbox" id="showUnits" checked> units</label>
+                  <label><input type="checkbox" id="showLabels" checked> labels</label>
+                </div>
+              </div>
+              <div class="inspector-group">
+                <div class="inspector-group-title">Minimap</div>
+                <div class="row">
+                  <label>Minimap view
+                    <select id="minimapMode">
+                      <option value="composite">default view</option>
+                      <option value="layer">single layer</option>
+                    </select>
+                  </label>
+                  <label>Minimap layer
+                    <select id="minimapLayer"></select>
+                  </label>
+                </div>
+                <div class="row">
+                  <label><input type="checkbox" id="showCamera" checked> camera</label>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="panel legend-panel">
+          <h2>Legend</h2>
+          <div id="legendPanel" class="legend-grid"></div>
+        </div>
+      </div>
+
+      <div class="panel viewports">
+        <div class="canvas-grid">
+          <div class="canvas-card">
+            <div>Screen</div>
+            <canvas id="screen"></canvas>
+          </div>
+          <div class="canvas-side">
+            <div class="canvas-card">
+              <div>Minimap</div>
+              <canvas id="minimap"></canvas>
+            </div>
+            <div class="canvas-card">
+              <div>Controls</div>
+              <div class="control-panel">
+                <div id="controlStatus" class="control-status">Running</div>
+                <div class="control-actions">
+                  <button id="startButton" class="control-button" type="button">Start</button>
+                  <button id="stopButton" class="control-button" type="button">Stop</button>
+                  <button id="stepButton" class="control-button" type="button">One Step</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <h2>HUD</h2>
+        <div id="hudPanel" class="hud-grid"></div>
+      </div>
+      <div class="panel">
+        <h2>Alerts</h2>
+        <div id="alertsPanel"></div>
+      </div>
+      <div class="panel">
+        <h2>Selection</h2>
+        <div id="selectionPanel"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="/viewer.js" defer></script>
+</body>
+</html>
